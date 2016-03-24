@@ -1,20 +1,21 @@
+library(dplyr)
                            # reading data
 data <- read.csv(file="~/Desktop/Tools/trafficdata/traffic-data.csv", sep=",")
 
                            # exploring data a bit
-summary(data)
+data %>% summary()
 # count duplicates
-nrow(data) - nrow(unique(data)) #0
+data %>% nrow() - data %>% unique() %>% nrow() #0
 # see if there are meaningful names
-names(data)
+data %>% names()
 # check ratio of NA
-length(data[is.na(data)]) / (nrow(data) * ncol(data)) #0.0713
+data %>% is.na() %>% mean() #0.0713
 # count unique values in each column
-col_uniq_cnt <- sapply(data, function(x) length(unique(x)))
+col_uniq_cnt <- data %>% sapply(function(x) x %>% unique() %>% length)
 # get columns with unique values less than 5
-sparse_columns <- unique_count[unique_count < 5]
+sparse_columns <- col_uniq_cnt[col_uniq_cnt < 5]
 # remove constant columns
-data <- data[,names(col_uniq_cnt[col_uniq_cnt > 1])]
+data <- data[,col_uniq_cnt[col_uniq_cnt > 1] %>% names()]
 
 # <<<INFORMATION>>>
 # rd.nm        = road name
@@ -22,29 +23,32 @@ data <- data[,names(col_uniq_cnt[col_uniq_cnt > 1])]
 # rd.rp.fullnm = full name of user
 
 # get user names
-usrs <- unique(data$rd.rp.nm)
+uniq_usr_nm <- data$rd.rp.nm %>% unique()
 # count unique users
-length(usrs) #16759
+uniq_usr_nm %>% length() #16759
 # calculate frequency of each user
-usr_freq <- table(data$rd.rp.nm)
+usr_freq <- data$rd.rp.nm %>% table()
 # check if count of unique user names and user full names match
-length(unique(data$rd.rp.nm)) - length(unique(data$rd.rp.fullnm)) # NO!
+data$rd.rp.nm %>% unique() %>% length() - data$rd.rp.fullnm %>% unique() %>% length() # NO!
 # group user names and user full names to see the different, group by user name
 # TODO: group by full name, group by user name !!!!!!!!!!!
 
 # get unique road names
-rd_nm <- unique(data$rd.nm)
+rd_nm <- data$rd.nm %>% unique()
 # count them
-length(rd_nm) #301
+rd_nm %>% length() #301
 # read some examples
-head(rd_nm)
-tail(rd_nm)
+rd_nm %>% head()
+rd_nm %>% tail()
 
 # <<<INFORMATION>>>
 # road format is area;segment_and_direction
 
 # sort road names and explore them
-sort(rd_nm)
+rd_nm %>% sort()
+
+# add columns rd.area, rd.from and rd.to
+
 
 # <<<INFORMATION>>>
 # each segment exists in both directions, yet to be confirmed
