@@ -61,7 +61,18 @@ extract_area_and_direction <- function(road_name){
   )
 }
 
+# Try to find any relation among unknown road related columns and with the fact of having an area without (from,to) pair
 data <- data %>% cbind(data$rd.nm %>% extract_area_and_direction())
+data <- data %>% cbind(data$rd.from %>% sapply(function(x) x %>% is.na()))
+data$rd.from.na <- data$rd.from.na %>% as.numeric()
+cols <- c('rd.cmrq', 'rd.stid', 'rd.strq', 'rd.ri', 'rd.new', 'rd.from.na')
+cor_mat = cor(data[,cols], use = 'complete')
+corrplot(cor_mat, method='complete')
+# There seem to be a strong inverse relation between rd.cmrq and rd.strq but not sure what that means
+data$rd.strq.eq.cmrq <- !xor(data$rd.strq, data$rd.cmrq) %>% as.numeric()
+cor_mat = cor(data[,c('rd.strq.eq.cmrq', 'rd.from.na')], use = 'complete')
+corrplot(cor_mat, method = 'shade')
+# There seem to be a strong relation between the 2 columns, but yet not meaningful
 
 # <<<INFORMATION>>>
 # each segment exists in both directions, yet to be confirmed
