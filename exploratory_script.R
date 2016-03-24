@@ -48,7 +48,20 @@ rd_nm %>% tail()
 rd_nm %>% sort()
 
 # add columns rd.area, rd.from and rd.to
+extract_area_and_direction <- function(road_name){
+  tokens <- road_name %>% as.character() %>% sapply(function(x){
+      a <- x%>% strsplit(split = ';') %>% unlist() %>% trimws()
+      b <- a[2] %>% strsplit(split = 'To') %>% unlist() %>% trimws()
+      c(a[1], b[1], b[2])
+  })
+  data.frame(
+    rd.area = tokens[1,],
+    rd.from = tokens[2,],
+    rd.to = tokens[3,]
+  )
+}
 
+data <- data %>% cbind(data$rd.nm %>% extract_area_and_direction())
 
 # <<<INFORMATION>>>
 # each segment exists in both directions, yet to be confirmed
