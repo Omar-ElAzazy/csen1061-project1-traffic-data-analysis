@@ -8,6 +8,7 @@ output: html_document
 library(dplyr)
 library(tidyr)
 library(corrplot)
+library(ggplot2)
 ```
 ```{r echo=FALSE}
 knitr::opts_chunk$set(cache=TRUE, warning=FALSE, message=FALSE)
@@ -83,11 +84,7 @@ data <- data %>% subset(!duplicated(data[,'rd.rp.cmid']))
 data <- data %>% select(-rd.rp.cmid)
 ```
 
-The rd.ri looks like the road id, so it is redundant and can be removed.
-
-```{r}
-data <- data %>% select(-rd.ri)
-```
+The rd.ri looks like the road id.
 
 The rd.nm has the format of "area;direction", so let's have this information represented in an easier way.
 
@@ -124,3 +121,49 @@ In the majority of the data rd.strq = 1 and rd.cmrq = 0. In the case of rd.strq 
 ```{r}
 data <- data %>% select(-rd.strq, -rd.cmrq)
 ```
+
+To represent traffic, we can use the average speed or some traffic index. In the data, rd.stid represents the status id of the road and rd.rp.stid represents the status id of the report posted. That can be used as the traffic index.
+
+```{r}
+data$rd.stid %>% unique()
+data$rd.rp.stid %>% unique()
+```
+
+The traffic index in both columns spans the range 1-10, and there are some NAs. The values from 1-5 indicate how crowded the road is, 1 = free, 5 = really crowded. 6 indicate a question in the comment, 10 indicate a report in the comment. 7,8,9 indicate different reasons for crowd.
+
+I think we should remove the NAs and only consider values from 1 to 5 to represent traffic index.
+
+We can now calculate the average total traffic index for each road. That's a value representing how crowded this road is in the over all. I will use rd.rp.stid for that to use the individual status ids for each report instead of a summary value like rd.stid.
+
+```{r}
+avg_trf_ind_per_area <- data %>% filter(!is.na(rd.rp.stid) & rd.rp.stid < 6) %>% group_by(rd.area) %>% summarise(rd.rp.stid.avg = mean(rd.rp.stid))
+avg_trf_ind_per_area %>% ggplot(aes(x=rd.area, y=rd.rp.stid.avg)) + geom_bar(stat="identity", width = 0.8) + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 4)) + xlab("Road Area") + ylab("Average Traffic Index")
+```
+
+```{r}
+avg_trf_ind_per_area[which.max(avg_trf_ind_per_area$rd.rp.stid.avg),]
+avg_trf_ind_per_area[which.min(avg_trf_ind_per_area$rd.rp.stid.avg),]
+```
+
+From the plot, it seems that the area with the least traffic index is "Gharda2ah/Sokhna Rd." and the area with the most traffic index is "Lotfy ElSayed".
+
+We can see the same traffic index per day and hour to see the rush hour and the most crowded day.
+
+```{r}
+data$rd.date.wday <- (data$rd.rp.date %>% strptime("%Y-%m-%d %H:%M:%S") %>% as.POSIXlt(origin="1970-01-01", tz = "UTC"))$wday
+data$rd.date.hour <- (data$rd.rp.date %>% strptime("%Y-%m-%d %H:%M:%S") %>% as.POSIXlt(origin="1970-01-01", tz = "UTC"))$hour
+```
+
+```{r}
+avg_trf_ind_per_wday <- data %>% filter(!is.na(rd.rp.stid) & rd.rp.stid < 6) %>% group_by(rd.date.wday) %>% summarise(rd.rp.stid.avg.wday = mean(rd.rp.stid))
+avg_trf_ind_per_wday %>% ggplot(aes(x=rd.date.wday, y=rd.rp.stid.avg.wday)) + geom_bar(stat="identity", width = 0.8) + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 4)) + xlab("Week Day") + ylab("Average Traffic Index")
+```
+
+From this plot we can see that the day with the least traffic index is Friday while the one with the highest traffic index is Monday.
+
+```{r}
+avg_trf_ind_per_hour <- data %>% filter(!is.na(rd.rp.stid) & rd.rp.stid < 6) %>% group_by(rd.date.hour) %>% summarise(rd.rp.stid.avg.hour = mean(rd.rp.stid))
+avg_trf_ind_per_hour %>% ggplot(aes(x=rd.date.hour, y=rd.rp.stid.avg.hour)) + geom_bar(stat="identity", width = 0.8) + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 4)) + xlab("Hour") + ylab("Average Traffic Index")
+```
+
+And from this plot we can see that the maximum average traffic index occures at 6 PM while the least at 5 AM.
