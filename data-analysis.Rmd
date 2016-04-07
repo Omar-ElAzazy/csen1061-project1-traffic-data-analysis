@@ -1,160 +1,64 @@
 ---
 title: Traffic Data Analysis
+author: "Omar ElAzazy, 25-1136"
 output: html_document
 ---
 
-# Reading Data
-
-```{r}
+```{r echo=FALSE, warning=FALSE, message=FALSE}
 library(dplyr)
 library(tidyr)
 library(corrplot)
-data <- read.csv(file="~/Desktop/Tools/trafficdata/traffic-data.csv", sep=",")
 ```
-# exploring data a bit
+```{r echo=FALSE}
+knitr::opts_chunk$set(cache=TRUE, warning=FALSE, message=FALSE)
+```
+
+Reading the data.
 
 ```{r}
+data <- read.csv(file="~/Desktop/Tools/trafficdata/traffic-data.csv", sep=",")
 data %>% summary()
 ```
 
-# count duplicates
+The data contains the crawl data, advertisement related columns, the road name, the hour and minute the road was last updated, some other road related columns, the username of the reporter, the full name of the reporter, the hour and minute since the report was made, the comment in the report, and some report related columns.
+
+Let's check the unique value in each column.
+
+```{r}
+data %>% sapply(function(x) x %>% unique() %>% length)
+```
+
+The advertisement related columns are all constant columns, in addition to some road and report related columns. I think it is safe to drop these constant columns.
+
+```{r}
+data <- data[,data %>% sapply(function(x) (x %>% unique() %>% length) != 1)]
+```
+
+Let's check the ratio of NAs
+
+```{r}
+data %>% is.na() %>% mean()
+data %>% sapply(function(x) x %>% is.na() %>% mean())
+```
+
+There is a high percentage of NAs in rd.img, rd.rp.img and rd.rp.rpImg. I think it is safe to drop these columns since they are related to images and have high NA percentage.
+
+```{r}
+data <- data %>% select(-rd.img, -rd.rp.img, -rd.rp.rpImg)
+```
+
+The NAs in rd.rp.fullnm seem to be replacable. One way to do it is to put the username (rd.rp.nm) as a replacement for the missing full name(rd.rp.fullnm).
+
+```{r}
+data$rd.rp.fullnm <- data %>% apply(1, function(x){
+  x['rd.rp.fullnm'] <- ifelse(is.na(x['rd.rp.fullnm']), x['rd.rp.nm'], x['rd.rp.fullnm'])
+})
+```
+
+Let's check for duplicate rows in the data
 
 ```{r}
 data %>% nrow() - data %>% unique() %>% nrow()
 ```
 
-# see if there are meaningful names
-
-```{r}
-data %>% names()
-```
-
-# check ratio of NA
-
-```{r}
-data %>% is.na() %>% mean() #0.0713
-```
-
-# count unique values in each column
-
-```{r}
-col_uniq_cnt <- data %>% sapply(function(x) x %>% unique() %>% length)
-```
-
-# get columns with unique values less than 5
-
-```{r}
-sparse_columns <- col_uniq_cnt[col_uniq_cnt < 5]
-```
-
-# remove constant columns
-
-```{r}
-data <- data[,col_uniq_cnt[col_uniq_cnt > 1] %>% names()]
-```
-
-# <<<INFORMATION>>>
-# rd.nm        = road name
-# rd.rp.nm     = name of user
-# rd.rp.fullnm = full name of user
-
-# get user names
-
-```{r}
-uniq_usr_nm <- data$rd.rp.nm %>% unique()
-```
-
-# count unique users
-
-```{r}
-uniq_usr_nm %>% length()
-```
-
-# calculate frequency of each user
-
-```{r}
-usr_freq <- data$rd.rp.nm %>% table()
-```
-
-# check if count of unique user names and user full names match
-
-```{r}
-data$rd.rp.nm %>% unique() %>% length() - data$rd.rp.fullnm %>% unique() %>% length() # NO!
-```
-
-# group user names and user full names to see the different, group by user name
-# TODO: group by full name, group by user name !!!!!!!!!!!
-
-# get unique road names
-
-```{r}
-rd_nm <- data$rd.nm %>% unique()
-```
-
-# count them
-
-```{r}
-rd_nm %>% length()
-```
-
-# read some examples
-
-```{r}
-rd_nm %>% head()
-rd_nm %>% tail()
-```
-
-# <<<INFORMATION>>>
-# road format is area;segment_and_direction
-
-# sort road names and explore them
-
-```{r}
-rd_nm %>% sort()
-```
-
-# add columns rd.area, rd.from and rd.to
-
-```{r}
-data <- data %>% mutate(rd.nm.tmp = rd.nm)
-data <- data %>% separate(col = rd.nm.tmp, into = c('rd.area', 'rd.from.tmp'), sep=';')
-data <- data %>% separate(col = rd.from.tmp, into = c('rd.from', 'rd.to'), sep='To')
-
-```
-
-# Try to find any relation among unknown road related columns and with the fact of having an area without (from,to) pair
-
-```{r}
-data <- data %>% mutate(rd.from.na = rd.from %>% is.na() %>% as.numeric())
-cols <- c('rd.cmrq', 'rd.stid', 'rd.strq', 'rd.ri', 'rd.new', 'rd.from.na')
-cor_mat = cor(data[,cols], use = 'complete')
-corrplot(cor_mat, method='square')
-```
-
-# There seem to be a strong inverse relation between rd.cmrq and rd.strq but not sure what that means
-
-```{r}
-data$rd.strq.eq.cmrq <- !xor(data$rd.strq, data$rd.cmrq) %>% as.numeric()
-cor_mat = cor(data[,c('rd.strq.eq.cmrq', 'rd.from.na')], use = 'complete')
-corrplot(cor_mat, method = 'shade')
-```
-
-# There seem to be a strong relation between the 2 columns, but yet not meaningful
-
-# <<<INFORMATION>>>
-# each segment exists in both directions, yet to be confirmed
-
-```{r}
-# rev_rd_nm <- paste(data$rd.area, paste(data$rd.to, data$rd.from, sep = ' To '), sep = ';')
-# has_match <- rev_rd_nm %>% sapply(function(x){
-#   (x %in% data$rd.nm) || (x %>% is.na())
-# })
-```
-
-
-
-# play around dates
-# TODO: play around dates !!!!!!!!!!!
-
-# normalize user rating
-# TODO: normalize user rating
+There aren't identical rows, but the way the data was crawled might cause duplicated rows to be represented differently.
