@@ -62,3 +62,29 @@ data %>% nrow() - data %>% unique() %>% nrow()
 ```
 
 There aren't identical rows, but the way the data was crawled might cause duplicated rows to be represented differently.
+
+crawl_date is the time the data was crawled, while rd.hr, rd.mn look like the time since the road information was last updated. Similarly, with rd.rp.hr and rd.rp.mn look like the time since the report was created. Let's have a date column for the exact timing of the road update and report creation.
+
+```{r}
+data <- data %>% mutate(rd.date = crawl_date %>% strptime("%a %b %e %H:%M:%S UTC %Y") %>% as.POSIXlt(origin="1970-01-01", tz = "UTC")  - rd.hr * 60 * 60 - rd.mn * 60 + 2 * 60 * 60)
+data <- data %>% mutate(rd.rp.date = crawl_date %>% strptime("%a %b %e %H:%M:%S UTC %Y") %>% as.POSIXlt(origin="1970-01-01", tz = "UTC") - rd.rp.hr * 60 * 60 - rd.rp.mn * 60 + 2 * 60 * 60)
+```
+
+We can now drop columns crawl_date, rd.hr, rd.mn, rd.rp.hr, and rd.rp.mn.
+
+```{r}
+data <- data %>% select(-crawl_date, -rd.hr, -rd.mn, -rd.rp.hr, -rd.rp.mn)
+```
+
+The data was acquired by crawling the data every 30 minutes. So, there might be no change during this 30 minutes interval and the data remain the same. To check for this we can look at rd.rp.cmid which looks like the comment id. Duplicates in comment id should indicate duplicated reports thus duplicated rows in different representations.
+
+```{r}
+data <- data %>% subset(!duplicated(data[,'rd.rp.cmid']))
+```
+
+The rd.nm has the format of "area;direction", so let's have this information represented in an easier way.
+
+```{r}
+data <- data %>% separate(col = rd.nm, into = c('rd.area', 'rd.from.tmp'), sep=';')
+data <- data %>% separate(col = rd.from.tmp, into = c('rd.from', 'rd.to'), sep='To')
+```
