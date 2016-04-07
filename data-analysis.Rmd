@@ -1,5 +1,5 @@
 ---
-title: Traffic Data Analysis
+title: "Traffic Data Analysis"
 author: "Omar ElAzazy, 25-1136"
 output: html_document
 ---
@@ -13,6 +13,12 @@ library(ggplot2)
 ```{r echo=FALSE}
 knitr::opts_chunk$set(cache=TRUE, warning=FALSE, message=FALSE)
 ```
+
+Summary:
+
+The most crowded day is Monday, most crowded hour is 6 PM and the most crowded area is "Lotfy ElSayed".
+
+The least croawded day is Friday, least crowded hour is 5 AM and the least crowded area is "Gharda2ah/Sokhna Rd.".
 
 Reading the data.
 
