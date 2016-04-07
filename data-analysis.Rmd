@@ -3,4 +3,168 @@ title: Traffic Data Analysis
 output: html_document
 ---
 
-this is where things start :)
+# Reading Data
+
+```{r}
+library(dplyr)
+library(tidyr)
+data <- read.csv(file="~/Desktop/Tools/trafficdata/traffic-data.csv", sep=",")
+```
+# exploring data a bit
+
+```{r}
+data %>% summary()
+```
+
+# count duplicates
+
+```{r}
+data %>% nrow() - data %>% unique() %>% nrow()
+```
+
+# see if there are meaningful names
+
+```{r}
+data %>% names()
+```
+
+# check ratio of NA
+
+```{r}
+data %>% is.na() %>% mean() #0.0713
+```
+
+# count unique values in each column
+
+```{r}
+col_uniq_cnt <- data %>% sapply(function(x) x %>% unique() %>% length)
+```
+
+# get columns with unique values less than 5
+
+```{r}
+sparse_columns <- col_uniq_cnt[col_uniq_cnt < 5]
+```
+
+# remove constant columns
+
+```{r}
+data <- data[,col_uniq_cnt[col_uniq_cnt > 1] %>% names()]
+```
+
+# <<<INFORMATION>>>
+# rd.nm        = road name
+# rd.rp.nm     = name of user
+# rd.rp.fullnm = full name of user
+
+# get user names
+
+```{r}
+uniq_usr_nm <- data$rd.rp.nm %>% unique()
+```
+
+# count unique users
+
+```{r}
+uniq_usr_nm %>% length()
+```
+
+# calculate frequency of each user
+
+```{r}
+usr_freq <- data$rd.rp.nm %>% table()
+```
+
+# check if count of unique user names and user full names match
+
+```{r}
+data$rd.rp.nm %>% unique() %>% length() - data$rd.rp.fullnm %>% unique() %>% length() # NO!
+```
+
+# group user names and user full names to see the different, group by user name
+# TODO: group by full name, group by user name !!!!!!!!!!!
+
+# get unique road names
+
+```{r}
+rd_nm <- data$rd.nm %>% unique()
+```
+
+# count them
+
+```{r}
+rd_nm %>% length()
+```
+
+# read some examples
+
+```{r}
+rd_nm %>% head()
+rd_nm %>% tail()
+```
+
+# <<<INFORMATION>>>
+# road format is area;segment_and_direction
+
+# sort road names and explore them
+
+```{r}
+rd_nm %>% sort()
+```
+
+# add columns rd.area, rd.from and rd.to
+
+```{r}
+extract_area_and_direction <- function(road_name){
+  tokens <- road_name %>% as.character() %>% sapply(function(x){
+      a <- x%>% strsplit(split = ';') %>% unlist() %>% trimws()
+      b <- a[2] %>% strsplit(split = 'To') %>% unlist() %>% trimws()
+      c(a[1], b[1], b[2])
+  })
+  data.frame(
+    rd.area2 = tokens[1,],
+    rd.from2 = tokens[2,],
+    rd.to2 = tokens[3,]
+  )
+}
+
+data <- data %>% cbind(data$rd.nm %>% extract_area_and_direction())
+```
+
+# Try to find any relation among unknown road related columns and with the fact of having an area without (from,to) pair
+
+```{r}
+data <- data %>% cbind(data$rd.from %>% sapply(function(x) x %>% is.na()))
+data$rd.from.na <- data$rd.from.na %>% as.numeric()
+cols <- c('rd.cmrq', 'rd.stid', 'rd.strq', 'rd.ri', 'rd.new', 'rd.from.na')
+cor_mat = cor(data[,cols], use = 'complete')
+corrplot(cor_mat, method='complete')
+```
+
+# There seem to be a strong inverse relation between rd.cmrq and rd.strq but not sure what that means
+
+```{r}
+data$rd.strq.eq.cmrq <- !xor(data$rd.strq, data$rd.cmrq) %>% as.numeric()
+cor_mat = cor(data[,c('rd.strq.eq.cmrq', 'rd.from.na')], use = 'complete')
+corrplot(cor_mat, method = 'shade')
+```
+
+# There seem to be a strong relation between the 2 columns, but yet not meaningful
+
+# <<<INFORMATION>>>
+# each segment exists in both directions, yet to be confirmed
+
+```{r}
+rev_rd_nm <- paste(data$rd.area, paste(data$rd.to, data$rd.from, sep = ' To '), sep = ';')
+has_match <- rev_rd_nm %>% sapply(function(x){
+  (x %in% data$rd.nm) || (x %>% is.na())
+})
+```
+
+
+
+# play around dates
+# TODO: play around dates !!!!!!!!!!!
+
+# normalize user rating
+# TODO: normalize user rating
