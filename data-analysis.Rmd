@@ -135,9 +135,14 @@ I think we should remove the NAs and only consider values from 1 to 5 to represe
 
 We can now calculate the average total traffic index for each road. That's a value representing how crowded this road is in the over all. I will use rd.rp.stid for that to use the individual status ids for each report instead of a summary value like rd.stid.
 
+From now on I will be using the 95% confidence level to get the confidence interval for the traffic index average calculated in each plot.
+
 ```{r}
-avg_trf_ind_per_area <- data %>% filter(!is.na(rd.rp.stid) & rd.rp.stid < 6) %>% group_by(rd.area) %>% summarise(rd.rp.stid.avg = mean(rd.rp.stid))
-avg_trf_ind_per_area %>% ggplot(aes(x=rd.area, y=rd.rp.stid.avg)) + geom_bar(stat="identity", width = 0.8) + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 4)) + xlab("Road Area") + ylab("Average Traffic Index")
+avg_trf_ind_per_area <- data %>% filter(!is.na(rd.rp.stid) & rd.rp.stid < 6) %>% group_by(rd.area) %>% summarise(rd.rp.stid.avg = mean(rd.rp.stid), rd.rp.stid.avg.U = mean(rd.rp.stid) +  qnorm(0.975)*sd(rd.rp.stid)/sqrt(length(rd.rp.stid)), rd.rp.stid.avg.L = mean(rd.rp.stid) - qnorm(0.975)*sd(rd.rp.stid)/sqrt(length(rd.rp.stid)))
+
+
+avg_trf_ind_per_area %>% ggplot(aes(x=rd.area, y=rd.rp.stid.avg)) + geom_bar(stat="identity", width = 0.8) + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 4)) + xlab("Road Area") + ylab("Average Traffic Index") + geom_errorbar(aes(ymax = rd.rp.stid.avg.U, ymin = rd.rp.stid.avg.L))
+
 ```
 
 ```{r}
@@ -155,15 +160,15 @@ data$rd.date.hour <- (data$rd.rp.date %>% strptime("%Y-%m-%d %H:%M:%S") %>% as.P
 ```
 
 ```{r}
-avg_trf_ind_per_wday <- data %>% filter(!is.na(rd.rp.stid) & rd.rp.stid < 6) %>% group_by(rd.date.wday) %>% summarise(rd.rp.stid.avg.wday = mean(rd.rp.stid))
-avg_trf_ind_per_wday %>% ggplot(aes(x=rd.date.wday, y=rd.rp.stid.avg.wday)) + geom_bar(stat="identity", width = 0.8) + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 4)) + xlab("Week Day") + ylab("Average Traffic Index")
+avg_trf_ind_per_wday <- data %>% filter(!is.na(rd.rp.stid) & rd.rp.stid < 6) %>% group_by(rd.date.wday) %>% summarise(rd.rp.stid.avg.wday = mean(rd.rp.stid), rd.rp.stid.avg.wday.U = mean(rd.rp.stid) +  qnorm(0.975)*sd(rd.rp.stid)/sqrt(length(rd.rp.stid)), rd.rp.stid.avg.wday.L = mean(rd.rp.stid) - qnorm(0.975)*sd(rd.rp.stid)/sqrt(length(rd.rp.stid)))
+avg_trf_ind_per_wday %>% ggplot(aes(x=rd.date.wday, y=rd.rp.stid.avg.wday)) + geom_bar(stat="identity", width = 0.8) + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 4)) + xlab("Week Day") + ylab("Average Traffic Index") + geom_errorbar(aes(ymax = rd.rp.stid.avg.wday.U, ymin = rd.rp.stid.avg.wday.L))
 ```
 
 From this plot we can see that the day with the least traffic index is Friday while the one with the highest traffic index is Monday.
 
 ```{r}
-avg_trf_ind_per_hour <- data %>% filter(!is.na(rd.rp.stid) & rd.rp.stid < 6) %>% group_by(rd.date.hour) %>% summarise(rd.rp.stid.avg.hour = mean(rd.rp.stid))
-avg_trf_ind_per_hour %>% ggplot(aes(x=rd.date.hour, y=rd.rp.stid.avg.hour)) + geom_bar(stat="identity", width = 0.8) + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 4)) + xlab("Hour") + ylab("Average Traffic Index")
+avg_trf_ind_per_hour <- data %>% filter(!is.na(rd.rp.stid) & rd.rp.stid < 6) %>% group_by(rd.date.hour) %>% summarise(rd.rp.stid.avg.hour = mean(rd.rp.stid), rd.rp.stid.avg.hour.U = mean(rd.rp.stid) +  qnorm(0.975)*sd(rd.rp.stid)/sqrt(length(rd.rp.stid)), rd.rp.stid.avg.hour.L = mean(rd.rp.stid) - qnorm(0.975)*sd(rd.rp.stid)/sqrt(length(rd.rp.stid)))
+avg_trf_ind_per_hour %>% ggplot(aes(x=rd.date.hour, y=rd.rp.stid.avg.hour)) + geom_bar(stat="identity", width = 0.8) + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 4)) + xlab("Hour") + ylab("Average Traffic Index") + geom_errorbar(aes(ymax = rd.rp.stid.avg.hour.U, ymin = rd.rp.stid.avg.hour.L))
 ```
 
 And from this plot we can see that the maximum average traffic index occures at 6 PM while the least at 5 AM.
