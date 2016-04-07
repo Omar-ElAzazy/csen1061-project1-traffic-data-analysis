@@ -76,10 +76,17 @@ We can now drop columns crawl_date, rd.hr, rd.mn, rd.rp.hr, and rd.rp.mn.
 data <- data %>% select(-crawl_date, -rd.hr, -rd.mn, -rd.rp.hr, -rd.rp.mn)
 ```
 
-The data was acquired by crawling the data every 30 minutes. So, there might be no change during this 30 minutes interval and the data remain the same. To check for this we can look at rd.rp.cmid which looks like the comment id. Duplicates in comment id should indicate duplicated reports thus duplicated rows in different representations.
+The data was acquired by crawling the data every 30 minutes. So, there might be no change during this 30 minutes interval and the data remain the same. To check for this we can look at rd.rp.cmid which looks like the comment id. Duplicates in comment id should indicate duplicated reports thus duplicated rows in different representations. After that we can drop the column rd.rp.cmid.
 
 ```{r}
 data <- data %>% subset(!duplicated(data[,'rd.rp.cmid']))
+data <- data %>% select(-rd.rp.cmid)
+```
+
+The rd.ri looks like the road id, so it is redundant and can be removed.
+
+```{r}
+data <- data %>% select(-rd.ri)
 ```
 
 The rd.nm has the format of "area;direction", so let's have this information represented in an easier way.
@@ -87,4 +94,33 @@ The rd.nm has the format of "area;direction", so let's have this information rep
 ```{r}
 data <- data %>% separate(col = rd.nm, into = c('rd.area', 'rd.from.tmp'), sep=';')
 data <- data %>% separate(col = rd.from.tmp, into = c('rd.from', 'rd.to'), sep='To')
+```
+
+Let's investigate the columns rd.strq and rd.cmrq.
+
+```{r}
+data$rd.strq %>% unique()
+data$rd.cmrq %>% unique()
+```
+
+Both of them are boolean columns, let's see the correlation between them. 
+
+```{r}
+cor(data[,c('rd.strq', 'rd.cmrq')], use = 'complete')
+```
+
+They seem to be inversly correlated but not sure what that means. Let's see how they differ together.
+
+```{r}
+data %>% filter(rd.strq == 0 & rd.cmrq == 0) %>% nrow()
+data %>% filter(rd.strq == 0 & rd.cmrq == 1) %>% nrow()
+data %>% filter(rd.strq == 1 & rd.cmrq == 0) %>% nrow()
+data %>% filter(rd.strq == 1 & rd.cmrq == 1) %>% nrow()
+data %>% filter(rd.strq == 1 & rd.cmrq == 1 & !is.na(rd.from) & !is.na(rd.to))
+```
+
+In the majority of the data rd.strq = 1 and rd.cmrq = 0. In the case of rd.strq == 1 and rd.cmrq == 1, this only happens when the rd.nm doesn't have a direction but only an area. These two columns doesn't look interesting for our research here so I will just drop them.
+
+```{r}
+data <- data %>% select(-rd.strq, -rd.cmrq)
 ```
